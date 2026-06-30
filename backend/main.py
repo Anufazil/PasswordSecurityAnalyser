@@ -1,11 +1,12 @@
 import secrets
 import string
 from fastapi import FastAPI
-from services.password_analyzer import analyze_password
 from fastapi.middleware.cors import CORSMiddleware
+
+from services.password_analyzer import analyze_password
 from services.entropy_calculator import (
     calculate_entropy,
-    estimate_crack_time
+    estimate_crack_time,
 )
 
 app = FastAPI()
@@ -18,16 +19,18 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
 @app.get("/")
 def home():
     return {
         "message": "Password Security Analyzer Backend Running"
     }
 
+
 @app.get("/analyze/{password}")
-def analyze(password: str):
-    print("ROUTE HIT:", password)
-    return analyze_password(password)
+async def analyze(password: str):
+    return await analyze_password(password)
+
 
 @app.get("/generate-password")
 def generate_password():
@@ -47,16 +50,15 @@ def generate_password():
         "password": password
     }
 
+
 @app.get("/entropy/{password}")
 def entropy(password: str):
 
     entropy_value = calculate_entropy(password)
 
-    crack_time = estimate_crack_time(
-        entropy_value
-    )
+    crack_time = estimate_crack_time(entropy_value)
 
     return {
         "entropy": entropy_value,
         "crack_time": crack_time
-    }    
+    }
