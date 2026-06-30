@@ -1,14 +1,44 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
+
+import Header from "./components/Header";
+import PasswordForm from "./components/PasswordForm";
+import ResultPanel from "./components/ResultPanel";
+import Footer from "./components/Footer";
+import LoadingSpinner from "./components/LoadingSpinner";
+import HistoryPanel from "./components/HistoryPanel";
+import DashboardStats from "./components/DashboardStats";
+
+import toast from "react-hot-toast";
+
+
 
 function App() {
   const [password, setPassword] = useState("");
   const [result, setResult] = useState(null);
   const [showPassword, setShowPassword] = useState(false);
+
   const [entropy, setEntropy] = useState("");
   const [crackTime, setCrackTime] = useState("");
 
+  const [loading, setLoading] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const debounceRef = useRef(null);
+
+  const [history, setHistory] = useState(() => {
+  const saved = localStorage.getItem("passwordHistory");
+  return saved ? JSON.parse(saved) : [];
+  });
+
   const analyzePassword = async () => {
+    clearTimeout(debounceRef.current);
+
+    if (!password.trim()) return;
+
     try {
+      setLoading(true);
+
+      // Password Analysis
       const response = await fetch(
         `http://127.0.0.1:8000/analyze/${password}`
       );
@@ -17,6 +47,37 @@ function App() {
 
       setResult(data);
 
+      toast.success("✅ Password analyzed successfully!");
+
+      const newEntry = {
+        password,
+        strength: data.strength,
+        healthScore: data.health_score,
+        breached: data.breached,
+        timestamp: new Date().toLocaleTimeString(),
+      };
+
+      setHistory((prev) => {
+        const updated = [
+          newEntry,
+          ...prev.filter(item => item.password !== password),
+        ].slice(0, 10);
+
+        localStorage.setItem(
+          "passwordHistory",
+          JSON.stringify(updated)
+        );
+
+        return updated;
+      });
+
+      if (data.breached) {
+        toast.error(
+          `⚠ Password found in ${data.breach_count.toLocaleString()} breaches`
+        );
+      }
+
+      // Entropy
       if (data.is_common) {
         setEntropy("");
         setCrackTime("");
@@ -30,23 +91,16 @@ function App() {
         setEntropy(entropyData.entropy);
         setCrackTime(entropyData.crack_time);
       }
+
+      setLoading(false);
+
     } catch (error) {
       console.error(error);
+
+      toast.error("❌ Something went wrong!");
+
+      setLoading(false);
     }
-  };
-
-  const getColor = () => {
-    if (!result) return "black";
-
-    if (result.strength === "Weak") {
-      return "red";
-    }
-
-    if (result.strength === "Medium") {
-      return "orange";
-    }
-
-    return "green";
   };
 
   const generatePassword = async () => {
@@ -58,86 +112,120 @@ function App() {
       const data = await response.json();
 
       setPassword(data.password);
+
+      toast.success("✅ Secure password generated!");
+
     } catch (error) {
       console.error(error);
+
+      toast.error("❌ Something went wrong!");
     }
   };
 
+  const copyPassword = async () => {
+    if (!password) return;
+
+    try {
+      await navigator.clipboard.writeText(password);
+
+      setCopied(true);
+
+      toast.success("📋 Password copied!");
+
+      setTimeout(() => {
+        setCopied(false);
+      }, 2000);
+
+    } catch (error) {
+      console.error(error);
+
+      toast.error("❌ Failed to copy password!");
+    }
+  };
+
+  const clearHistory = () => {
+    setHistory([]);
+    localStorage.removeItem("passwordHistory");
+    toast.success("✅ History cleared!");
+  };
+
+  const deleteHistoryItem = (passwordToDelete) => {
+  const updated = history.filter(
+    (item) => item.password !== passwordToDelete
+  );
+
+  setHistory(updated);
+
+  localStorage.setItem(
+    "passwordHistory",
+    JSON.stringify(updated)
+  );
+
+  toast.success("History item removed");
+};
+
+  useEffect(() => {
+    if (!password.trim()) {
+      setResult(null);
+      setEntropy("");
+      setCrackTime("");
+      return;
+    }
+
+    clearTimeout(debounceRef.current);
+
+    debounceRef.current = setTimeout(() => {
+      analyzePassword();
+    }, 3000);
+
+    return () => clearTimeout(debounceRef.current);
+
+  }, [password]);
+
   return (
-    <div style={{ padding: "40px" }}>
-      <h1>Password Security Analyzer</h1>
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-blue-950 text-white">
 
-      <input
-        type={showPassword ? "text" : "password"}
-        placeholder="Enter Password"
-        value={password}
-        onChange={(e) => setPassword(e.target.value)}
-      />
+      <div className="max-w-7xl mx-auto px-6 py-10">
 
-      <button onClick={() => setShowPassword(!showPassword)}>
-        {showPassword ? "Hide" : "Show"}
-      </button>
+        <Header />
 
-      <button onClick={analyzePassword}>
-        Analyze
-      </button>
+        <DashboardStats
+            history={history}
+        />
 
-      <button onClick={generatePassword}>
-        Generate Password
-      </button>
+        <PasswordForm
+          password={password}
+          setPassword={setPassword}
+          showPassword={showPassword}
+          setShowPassword={setShowPassword}
+          analyzePassword={analyzePassword}
+          generatePassword={generatePassword}
+          copyPassword={copyPassword}
+          copied={copied}
+          loading={loading}
+        />
 
-      {result && (
-        <div>
-          <h2>Result</h2>
+        {loading ? (
+          <LoadingSpinner />
+        ) : (
+          <ResultPanel
+            result={result}
+            entropy={entropy}
+            crackTime={crackTime}
+          />
+        )}
 
-          <p>Score: {result.score}</p>
+        <HistoryPanel
+          history={history}
+          setPassword={setPassword}
+          clearHistory={clearHistory}
+          deleteHistoryItem={deleteHistoryItem}
+        />
 
-          {!result.is_common && (
-            <>
-              <p>Entropy: {entropy} bits</p>
+        <Footer />
 
-              <p>
-                Estimated Crack Time: {crackTime}
-              </p>
-            </>
-          )}
+      </div>
 
-          <div
-            style={{
-              width: "300px",
-              height: "20px",
-              border: "1px solid gray",
-              borderRadius: "10px",
-              overflow: "hidden",
-              marginBottom: "10px"
-            }}
-          >
-            <div
-              style={{
-                width: `${result.score}%`,
-                height: "100%",
-                backgroundColor: getColor(),
-                transition: "0.5s"
-              }}
-            />
-          </div>
-
-          <p
-            style={{
-              color: getColor(),
-              fontWeight: "bold"
-            }}
-          >
-            Strength: {result.strength}
-          </p>
-
-          <ul>
-            {result.feedback.map((item, index) => (
-              <li key={index}>{item}</li>
-            ))}
-          </ul>
-        </div>
-      )}
     </div>
   );
 }
