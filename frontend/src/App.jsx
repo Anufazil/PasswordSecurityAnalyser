@@ -14,6 +14,8 @@ import toast from "react-hot-toast";
 
 
 function App() {
+  console.log("API URL:", import.meta.env.VITE_API_URL);
+  
   const [password, setPassword] = useState("");
   const [result, setResult] = useState(null);
   const [showPassword, setShowPassword] = useState(false);
@@ -40,9 +42,7 @@ function App() {
       setLoading(true);
 
       // Password Analysis
-      const response = await fetch(
-        `http://127.0.0.1:8000/analyze/${password}`
-      );
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/analyze/${password}`);
 
       const data = await response.json();
 
@@ -83,9 +83,7 @@ function App() {
         setEntropy("");
         setCrackTime("");
       } else {
-        const entropyResponse = await fetch(
-          `http://127.0.0.1:8000/entropy/${password}`
-        );
+        const entropyResponse = await fetch(`${import.meta.env.VITE_API_URL}/entropy/${password}`);
 
         const entropyData = await entropyResponse.json();
 
@@ -106,9 +104,7 @@ function App() {
 
   const generatePassword = async () => {
     try {
-      const response = await fetch(
-        "http://127.0.0.1:8000/generate-password"
-      );
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/generate-password`);
 
       const data = await response.json();
 
@@ -221,7 +217,7 @@ function App() {
             entropy={entropy}
             crackTime={crackTime}
         />
-        
+
         <HistoryPanel
           history={history}
           setPassword={setPassword}
