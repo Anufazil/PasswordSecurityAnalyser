@@ -103,21 +103,37 @@ function App() {
   };
 
   const generatePassword = async () => {
-    try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/generate-password`);
+  try {
+    console.log("=== Generate Password Started ===");
 
-      const data = await response.json();
+    const response = await fetch(
+      `${import.meta.env.VITE_API_URL}/generate-password`
+    );
 
-      setPassword(data.password);
+    console.log("Response:", response);
 
-      toast.success("✅ Secure password generated!");
-
-    } catch (error) {
-      console.error(error);
-
-      toast.error("❌ Something went wrong!");
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
     }
-  };
+
+    const data = await response.json();
+
+    console.log("Received Data:", data);
+
+    setPassword(data.password);
+
+    console.log("Password State Updated");
+
+    toast.success("✅ Secure password generated!");
+
+    console.log("Toast Displayed");
+
+  } catch (error) {
+    console.error("Generate Password Error:", error);
+
+    toast.error("❌ Something went wrong!");
+  }
+};
 
   const copyPassword = async () => {
     if (!password) return;
