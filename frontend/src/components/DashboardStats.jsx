@@ -13,6 +13,10 @@ function DashboardStats({ history }) {
     (item) => item.breached
   ).length;
 
+  const validHistory = history.filter(
+    (item) => typeof item.healthScore === "number"
+  );
+
   const avgHealth =
     total === 0
       ? 0
@@ -49,6 +53,7 @@ function DashboardStats({ history }) {
       color: "text-blue-400",
     },
   ];
+  console.log(history);
 
   return (
 

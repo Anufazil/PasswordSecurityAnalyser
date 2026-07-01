@@ -7,6 +7,7 @@ import Footer from "./components/Footer";
 import LoadingSpinner from "./components/LoadingSpinner";
 import HistoryPanel from "./components/HistoryPanel";
 import DashboardStats from "./components/DashboardStats";
+import ExportButtons from "./components/ExportButtons";
 
 import toast from "react-hot-toast";
 
@@ -215,6 +216,12 @@ function App() {
           />
         )}
 
+        <ExportButtons
+            result={result}
+            entropy={entropy}
+            crackTime={crackTime}
+        />
+        
         <HistoryPanel
           history={history}
           setPassword={setPassword}
